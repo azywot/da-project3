@@ -74,3 +74,28 @@ def plot_marginal_values_ann_utadis(model: Uta, criteria_nr: int):
         "Marginal values for each attribute (ai = Criterion #i)", fontsize=20)
     plt.tight_layout()
     plt.show()
+
+
+def plot_measures(data):
+    metrics = ['accuracy', 'f1', 'auc']
+    models = ['XGBoost', 'ANN-UTA', 'Simple-NN']
+
+    fig, axs = plt.subplots(1, 3, figsize=(15,5))
+    width=0.5
+
+    for i, metric in enumerate(metrics):
+        train_data = [data[model]['train'][metric] for model in models]
+        test_data = [data[model]['test'][metric] for model in models]
+
+        x = range(len(models))
+        axs[i].bar([xi-(width/2) for xi in x], train_data, width=width, color='b', alpha=0.5, label='train')
+        axs[i].bar([xi+(width/2) for xi in x], test_data, width=width, color='g', alpha=0.5, label='test')
+
+        axs[i].set_xlabel('Model')
+        axs[i].set_ylabel(metric.capitalize())
+        axs[i].set_xticks(x)
+        axs[i].set_xticklabels(models)
+        axs[i].set_title(f'{metric.capitalize()} (Train/Test)')
+        axs[i].legend()
+
+    plt.show()
