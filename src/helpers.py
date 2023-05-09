@@ -1,9 +1,10 @@
-# CODE FROM KM, NOT MODIFIED 
+# SOURCE: Professor Krzysztof Martyn (PUT)
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, precision_recall_fscore_support
+
 from functools import partial
 
 
@@ -35,12 +36,18 @@ def AUC(x, target):
     return roc_auc_score(target.detach().numpy(), x.detach().numpy()[:, 0])
 
 
+def F1_score(x, target):
+    y_pred = (x[:, 0] > 0) * 1
+    _, _, f1_score, _ = precision_recall_fscore_support(target.detach().numpy(), y_pred, average='binary')
+    return f1_score
+
+
 def CreateDataLoader(X, y):
     dataset = NumpyDataset(X, y)
     return DataLoader(dataset, batch_size=len(dataset))
 
 
-def Train(model, train_dataloader, test_dataloader, path, lr=0.01, epoch_nr=200):
+def Train(model, train_dataloader, test_dataloader, path, lr=0.01, epoch_nr=200, loss_function=Regret):
     optimizer = optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.99))
     best_acc = 0.0
     best_auc = 0.0
@@ -49,22 +56,25 @@ def Train(model, train_dataloader, test_dataloader, path, lr=0.01, epoch_nr=200)
             inputs, labels = data
             optimizer.zero_grad()
             outputs = model(inputs)
-            loss = Regret(outputs, labels)
+            loss = loss_function(outputs, labels)
             loss.backward()
             optimizer.step()
             acc = Accuracy(outputs, labels)
             auc = AUC(outputs, labels)
+            f1 = F1_score(outputs, labels)
 
         if acc > best_acc:
             best_acc = acc
             best_auc = auc
+            best_f1 = f1
             with torch.no_grad():
                 for i, data in enumerate(test_dataloader, 0):
                     inputs, labels = data
                     outputs = model(inputs)
-                    loss_test = Regret(outputs, labels)
+                    loss_test = loss_function(outputs, labels)
                     acc_test = Accuracy(outputs, labels)
                     auc_test = AUC(outputs, labels)
+                    f1_test = F1_score(outputs, labels)
 
             torch.save(
                 {
@@ -77,11 +87,13 @@ def Train(model, train_dataloader, test_dataloader, path, lr=0.01, epoch_nr=200)
                     "accuracy_test": acc_test,
                     "auc_train": auc,
                     "auc_test": auc_test,
+                    "f1_train": f1,
+                    "f1_test": f1_test,
                 },
                 path,
             )
 
-    return best_acc, acc_test, best_auc, auc_test
+    return best_acc, acc_test, best_auc, auc_test, best_f1, f1_test
 
 
 class Hook:

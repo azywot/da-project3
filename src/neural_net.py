@@ -46,6 +46,35 @@ class SimpleNN(nn.Module):
         x = self.sigmoid(x)
         return x
 
+class BiggerNN(nn.Module):
+    def __init__(self, criteria_nr: int = 5):
+        super(BiggerNN, self).__init__()
+        self.fc1 = nn.Linear(criteria_nr, 128)
+        self.fc2 = nn.Linear(128, 64)
+        self.fc3 = nn.Linear(64, 32)
+        self.fc4 = nn.Linear(32, 16)
+        self.fc5 = nn.Linear(16, 1)
+        self.dropout = nn.Dropout(p=0.2)
+        self.relu = nn.ReLU()
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.fc2(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.fc3(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.fc4(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.fc5(x)
+        x = self.sigmoid(x)
+        return x
+
 
 def train(model: SimpleNN, train_dataloader: DataLoader, lr: float = 0.01,
           epoch_nr: int = 10) -> None:
@@ -65,4 +94,5 @@ def train(model: SimpleNN, train_dataloader: DataLoader, lr: float = 0.01,
                 optimizer.step()
 
                 tepoch.set_postfix(loss=loss.item(), accuracy=100 * accuracy)
+                tepoch.update()
                 sleep(0.01)

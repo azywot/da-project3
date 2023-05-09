@@ -6,8 +6,13 @@ from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 import shap
 import matplotlib.pyplot as plt
 from src.nb_UTA import Uta
-from src.helpers import append_output, Hook
+from src.helpers import append_output, Hook, Accuracy, AUC, F1_score
 
+def add_measures(measures: dict, results: tuple, model_name: str, mode: str) -> dict:
+    if model_name not in measures:
+        measures[model_name] = dict()
+    measures[model_name][mode] = {'accuracy': round(results[0], 4), 'f1': round(results[1], 4), 'auc': round(results[2], 4)}
+    return measures
 
 def score_model(y_true: np.ndarray, y_pred: np.ndarray) -> tuple:
     accuracy = round(accuracy_score(y_true, y_pred), 4)
@@ -54,13 +59,13 @@ def get_marginal_values(model: Uta, criteria_nr: int) -> tuple[list[torch.FloatT
 
 def plot_marginal_values_ann_utadis(model: Uta, criteria_nr: int):
     xs, outs = get_marginal_values(model, criteria_nr)
-    fig, axs = plt.subplots(3, 2, figsize=(10, 10))
-    axs = axs.flatten()
+    fig, axs = plt.subplots(1, criteria_nr, figsize=(25, 5))
 
     for i in range(criteria_nr):
         axs[i].plot(xs, outs[:, i], color="deeppink")
         axs[i].set_ylabel("marginal value $u_{0}(a_i)$".format(i + 1), fontsize=14)
         axs[i].set_xlabel("performance $g_{0}(a_i)$".format(i + 1), fontsize=14)
+        axs[i].set_title("Criterion #{}".format(i+1), fontsize=16)
 
     plt.suptitle("Marginal values for each attribute (ai = Criterion #i)", fontsize=20)
     plt.tight_layout()
