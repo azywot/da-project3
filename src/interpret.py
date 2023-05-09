@@ -78,7 +78,7 @@ def plot_marginal_values_ann_utadis(model: Uta, criteria_nr: int):
 
 def plot_measures(data):
     metrics = ['accuracy', 'f1', 'auc']
-    models = ['XGBoost', 'ANN-UTA', 'Simple-NN']
+    models = data.keys()
 
     fig, axs = plt.subplots(1, 3, figsize=(15,5))
     width=0.5
