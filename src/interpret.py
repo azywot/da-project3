@@ -24,6 +24,7 @@ def shap_tree_explainer(model: xgb.XGBClassifier, x: np.ndarray,
     shap.summary_plot(shap_values, x, color='coolwarm')
     return explainer, shap_values
 
+
 # NOTE: not used
 def shap_deep_explainer(model: nn.Module, x: np.ndarray) -> tuple:
     x_tensor = torch.from_numpy(x)
@@ -31,6 +32,7 @@ def shap_deep_explainer(model: nn.Module, x: np.ndarray) -> tuple:
     shap_values = explainer.shap_values(x_tensor)
     shap.summary_plot(shap_values, x_tensor, color='coolwarm')
     return explainer, shap_values
+
 
 def getSimpleInput(val: float, criteria_nr: int):
     return torch.FloatTensor([[val] * criteria_nr]).view(1, 1, -1).cpu()
@@ -52,6 +54,7 @@ def get_marginal_values(model: Uta, criteria_nr: int) -> tuple[list[torch.FloatT
     outs = outs / outs[-1].sum()
     return xs, outs
 
+
 def plot_marginal_values_ann_utadis(model: Uta, criteria_nr: int):
     xs, outs = get_marginal_values(model, criteria_nr)
     fig, axs = plt.subplots(3, 2, figsize=(10, 10))
@@ -59,9 +62,12 @@ def plot_marginal_values_ann_utadis(model: Uta, criteria_nr: int):
 
     for i in range(criteria_nr):
         axs[i].plot(xs, outs[:, i], color="deeppink")
-        axs[i].set_ylabel("marginal value $u_{0}(a_i)$".format(i + 1), fontsize=14)
-        axs[i].set_xlabel("performance $g_{0}(a_i)$".format(i + 1), fontsize=14)
+        axs[i].set_ylabel(
+            "marginal value $u_{0}(a_i)$".format(i + 1), fontsize=14)
+        axs[i].set_xlabel(
+            "performance $g_{0}(a_i)$".format(i + 1), fontsize=14)
 
-    plt.suptitle("Marginal values for each attribute (ai = Criterion #i)", fontsize=20)
+    plt.suptitle(
+        "Marginal values for each attribute (ai = Criterion #i)", fontsize=20)
     plt.tight_layout()
     plt.show()
