@@ -32,7 +32,7 @@ def shap_tree_explainer(
 ) -> tuple:
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(x)
-    np.abs(shap_values.sum(1) + explainer.expected_value - pred).max()
+    # np.abs(shap_values.sum(1) + explainer.expected_value - pred).max()
     shap.summary_plot(shap_values, x, color="coolwarm")
     return explainer, shap_values
 
