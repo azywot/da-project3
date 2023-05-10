@@ -4,6 +4,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 from sklearn.metrics import roc_auc_score, precision_recall_fscore_support
+import numpy as np
 
 from functools import partial
 
@@ -32,8 +33,10 @@ def Regret(x, target):
 
 def Accuracy(x, target):
     return (target == (x[:, 0] > 0) * 1).detach().numpy().mean()
+# def Accuracy(y_pred, target):
+#     return (target == y_pred).detach().numpy().mean()
 
-
+# TODO?? fix AUC cause this one hasnt been changed
 def AUC(x, target):
     return roc_auc_score(target.detach().numpy(), x.detach().numpy()[:, 0])
 
@@ -44,7 +47,14 @@ def F1_score(x, target):
         target.detach().numpy(), y_pred, average="binary"
     )
     return f1_score
-
+# def F1_score(y_pred, target):
+#     print(y_pred.detach().numpy(), y_pred.detach().numpy().shape)
+#     print(target.detach().numpy(), target.detach().numpy().shape)
+#     # y_pred = (x[:, 0] > 0) * 1
+#     _, _, f1_score, _ = precision_recall_fscore_support(
+#         target.detach().numpy(), y_pred.detach().numpy(), average="binary"
+#     )
+#     return f1_score
 
 def CreateDataLoader(X, y):
     dataset = NumpyDataset(X, y)
@@ -59,6 +69,7 @@ def Train(
     lr=0.01,
     epoch_nr=200,
     loss_function=Regret,
+    uta=False,
 ):
     optimizer = optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.99))
     best_acc = 0.0
@@ -71,6 +82,10 @@ def Train(
             loss = loss_function(outputs, labels)
             loss.backward()
             optimizer.step()
+            # if uta:
+            #     outputs = (outputs[:, 0] > 0) * 1
+            # else:
+            #     outputs = np.squeeze(outputs.detach().round())
             acc = Accuracy(outputs, labels)
             auc = AUC(outputs, labels)
             f1 = F1_score(outputs, labels)
@@ -84,6 +99,10 @@ def Train(
                     inputs, labels = data
                     outputs = model(inputs)
                     loss_test = loss_function(outputs, labels)
+                    # if uta:
+                    #     outputs = (outputs[:, 0] > 0) * 1
+                    # else:
+                    #     outputs = np.squeeze(outputs.detach().round())
                     acc_test = Accuracy(outputs, labels)
                     auc_test = AUC(outputs, labels)
                     f1_test = F1_score(outputs, labels)
