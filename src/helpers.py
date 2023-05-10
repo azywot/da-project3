@@ -21,6 +21,8 @@ class NumpyDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
+def BCELoss(x, target):
+    return torch.mean(-target * torch.log(x) - (1 - target) * torch.log(1 - x))
 
 def Regret(x, target):
     return torch.mean(
