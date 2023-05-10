@@ -38,7 +38,9 @@ def AUC(x, target):
 
 def F1_score(x, target):
     y_pred = (x[:, 0] > 0) * 1
-    _, _, f1_score, _ = precision_recall_fscore_support(target.detach().numpy(), y_pred, average='binary')
+    _, _, f1_score, _ = precision_recall_fscore_support(
+        target.detach().numpy(), y_pred, average="binary"
+    )
     return f1_score
 
 
@@ -47,7 +49,15 @@ def CreateDataLoader(X, y):
     return DataLoader(dataset, batch_size=len(dataset))
 
 
-def Train(model, train_dataloader, test_dataloader, path, lr=0.01, epoch_nr=200, loss_function=Regret):
+def Train(
+    model,
+    train_dataloader,
+    test_dataloader,
+    path,
+    lr=0.01,
+    epoch_nr=200,
+    loss_function=Regret,
+):
     optimizer = optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.99))
     best_acc = 0.0
     best_auc = 0.0

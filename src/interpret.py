@@ -8,11 +8,17 @@ import matplotlib.pyplot as plt
 from src.nb_UTA import Uta
 from src.helpers import append_output, Hook, Accuracy, AUC, F1_score
 
+
 def add_measures(measures: dict, results: tuple, model_name: str, mode: str) -> dict:
     if model_name not in measures:
         measures[model_name] = dict()
-    measures[model_name][mode] = {'accuracy': round(results[0], 4), 'f1': round(results[1], 4), 'auc': round(results[2], 4)}
+    measures[model_name][mode] = {
+        "accuracy": round(results[0], 4),
+        "f1": round(results[1], 4),
+        "auc": round(results[2], 4),
+    }
     return measures
+
 
 def score_model(y_true: np.ndarray, y_pred: np.ndarray) -> tuple:
     accuracy = round(accuracy_score(y_true, y_pred), 4)
@@ -21,12 +27,13 @@ def score_model(y_true: np.ndarray, y_pred: np.ndarray) -> tuple:
     return accuracy, f1, auc
 
 
-def shap_tree_explainer(model: xgb.XGBClassifier, x: np.ndarray,
-                        pred: np.ndarray) -> tuple:
+def shap_tree_explainer(
+    model: xgb.XGBClassifier, x: np.ndarray, pred: np.ndarray
+) -> tuple:
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(x)
     np.abs(shap_values.sum(1) + explainer.expected_value - pred).max()
-    shap.summary_plot(shap_values, x, color='coolwarm')
+    shap.summary_plot(shap_values, x, color="coolwarm")
     return explainer, shap_values
 
 
@@ -35,7 +42,7 @@ def shap_deep_explainer(model: nn.Module, x: np.ndarray) -> tuple:
     x_tensor = torch.from_numpy(x)
     explainer = shap.DeepExplainer(model, x_tensor)
     shap_values = explainer.shap_values(x_tensor)
-    shap.summary_plot(shap_values, x_tensor, color='coolwarm')
+    shap.summary_plot(shap_values, x_tensor, color="coolwarm")
     return explainer, shap_values
 
 
@@ -43,7 +50,9 @@ def getSimpleInput(val: float, criteria_nr: int):
     return torch.FloatTensor([[val] * criteria_nr]).view(1, 1, -1).cpu()
 
 
-def get_marginal_values(model: Uta, criteria_nr: int) -> tuple[list[torch.FloatTensor, np.ndarray]]:
+def get_marginal_values(
+    model: Uta, criteria_nr: int
+) -> tuple[list[torch.FloatTensor, np.ndarray]]:
     hook = Hook(model.method.criterionLayerCombine, append_output)
     xs = []
     with torch.no_grad():
@@ -68,34 +77,47 @@ def plot_marginal_values_ann_utadis(model: Uta, criteria_nr: int):
         axs[i].plot(xs, outs[:, i], color="deeppink")
         axs[i].set_ylabel("marginal value $u_{0}(a_i)$".format(i + 1), fontsize=14)
         axs[i].set_xlabel("performance $g_{0}(a_i)$".format(i + 1), fontsize=14)
-        axs[i].set_title("Criterion #{}".format(i+1), fontsize=16)
+        axs[i].set_title("Criterion #{}".format(i + 1), fontsize=16)
 
-    plt.suptitle(
-        "Marginal values for each attribute (ai = Criterion #i)", fontsize=20)
+    plt.suptitle("Marginal values for each attribute (ai = Criterion #i)", fontsize=20)
     plt.tight_layout()
     plt.show()
 
 
 def plot_measures(data):
-    metrics = ['accuracy', 'f1', 'auc']
+    metrics = ["accuracy", "f1", "auc"]
     models = data.keys()
 
-    fig, axs = plt.subplots(1, 3, figsize=(15,5))
-    width=0.5
+    fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+    width = 0.5
 
     for i, metric in enumerate(metrics):
-        train_data = [data[model]['train'][metric] for model in models]
-        test_data = [data[model]['test'][metric] for model in models]
+        train_data = [data[model]["train"][metric] for model in models]
+        test_data = [data[model]["test"][metric] for model in models]
 
         x = range(len(models))
-        axs[i].bar([xi-(width/2) for xi in x], train_data, width=width, color='b', alpha=0.5, label='train')
-        axs[i].bar([xi+(width/2) for xi in x], test_data, width=width, color='g', alpha=0.5, label='test')
+        axs[i].bar(
+            [xi - (width / 2) for xi in x],
+            train_data,
+            width=width,
+            color="b",
+            alpha=0.5,
+            label="train",
+        )
+        axs[i].bar(
+            [xi + (width / 2) for xi in x],
+            test_data,
+            width=width,
+            color="g",
+            alpha=0.5,
+            label="test",
+        )
 
-        axs[i].set_xlabel('Model')
+        axs[i].set_xlabel("Model")
         axs[i].set_ylabel(metric.capitalize())
         axs[i].set_xticks(x)
         axs[i].set_xticklabels(models)
-        axs[i].set_title(f'{metric.capitalize()} (Train/Test)')
+        axs[i].set_title(f"{metric.capitalize()} (Train/Test)")
         axs[i].legend()
 
     plt.show()
