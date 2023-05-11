@@ -5,8 +5,10 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 from sklearn.metrics import roc_auc_score, precision_recall_fscore_support
 import numpy as np
+import torch.nn as nn
 
 from functools import partial
+from src.neural_net import SimpleNN
 
 
 class NumpyDataset(Dataset):
@@ -33,10 +35,7 @@ def Regret(x, target):
 
 def Accuracy(x, target):
     return (target == (x[:, 0] > 0) * 1).detach().numpy().mean()
-# def Accuracy(y_pred, target):
-#     return (target == y_pred).detach().numpy().mean()
 
-# TODO?? fix AUC cause this one hasnt been changed
 def AUC(x, target):
     return roc_auc_score(target.detach().numpy(), x.detach().numpy()[:, 0])
 
@@ -47,14 +46,6 @@ def F1_score(x, target):
         target.detach().numpy(), y_pred, average="binary"
     )
     return f1_score
-# def F1_score(y_pred, target):
-#     print(y_pred.detach().numpy(), y_pred.detach().numpy().shape)
-#     print(target.detach().numpy(), target.detach().numpy().shape)
-#     # y_pred = (x[:, 0] > 0) * 1
-#     _, _, f1_score, _ = precision_recall_fscore_support(
-#         target.detach().numpy(), y_pred.detach().numpy(), average="binary"
-#     )
-#     return f1_score
 
 def CreateDataLoader(X, y):
     dataset = NumpyDataset(X, y)
@@ -69,7 +60,6 @@ def Train(
     lr=0.01,
     epoch_nr=200,
     loss_function=Regret,
-    uta=False,
 ):
     optimizer = optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.99))
     best_acc = 0.0
@@ -82,10 +72,6 @@ def Train(
             loss = loss_function(outputs, labels)
             loss.backward()
             optimizer.step()
-            # if uta:
-            #     outputs = (outputs[:, 0] > 0) * 1
-            # else:
-            #     outputs = np.squeeze(outputs.detach().round())
             acc = Accuracy(outputs, labels)
             auc = AUC(outputs, labels)
             f1 = F1_score(outputs, labels)
@@ -99,10 +85,6 @@ def Train(
                     inputs, labels = data
                     outputs = model(inputs)
                     loss_test = loss_function(outputs, labels)
-                    # if uta:
-                    #     outputs = (outputs[:, 0] > 0) * 1
-                    # else:
-                    #     outputs = np.squeeze(outputs.detach().round())
                     acc_test = Accuracy(outputs, labels)
                     auc_test = AUC(outputs, labels)
                     f1_test = F1_score(outputs, labels)
@@ -125,6 +107,72 @@ def Train(
             )
 
     return best_acc, acc_test, best_auc, auc_test, best_f1, f1_test
+
+
+def Train_NN(
+    model: SimpleNN,
+    train_dataloader: DataLoader,
+    test_dataloader: DataLoader,
+    path: str,
+    lr: float=0.01,
+    epoch_nr: int=200,
+):
+    optimizer = optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.99))
+    loss_function = nn.BCELoss()
+    best_acc = 0.0
+    best_auc = 0.0
+    sig = nn.Sigmoid()
+    for epoch in tqdm(range(epoch_nr)):
+        for _, data in enumerate(train_dataloader, 0):
+            inputs, labels = data
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            # print(np.squeeze(outputs).shape, labels.shape, type(np.squeeze(outputs)), type(labels))
+            # print(sig(np.squeeze(outputs)), labels)
+            loss = loss_function(sig(np.squeeze(outputs)), labels.float())
+            loss.backward()
+            optimizer.step()
+            acc = (outputs.round() == labels).float().mean()
+            # print(acc)
+            auc = roc_auc_score(labels, outputs.detach().numpy()[:, 0])
+            # print(np.squeeze(sig(outputs).detach().numpy().round()))
+            _, _, f1, _ = precision_recall_fscore_support(
+                labels, np.squeeze(sig(outputs).detach().numpy().round()), average="binary"
+            )
+
+        if acc > best_acc:
+            best_acc = acc
+            best_auc = auc
+            best_f1 = f1
+            with torch.no_grad():
+                for i, data in enumerate(test_dataloader, 0):
+                    inputs, labels = data
+                    outputs = model(inputs)
+                    loss_test = loss_function(sig(np.squeeze(outputs)), labels.float())
+                    acc_test = (outputs.round() == labels).float().mean()
+                    auc_test = roc_auc_score(labels, outputs.detach().numpy()[:, 0])
+                    _, _, f1_test, _ = precision_recall_fscore_support(
+                        labels, np.squeeze(sig(outputs).detach().numpy().round()), average="binary"
+                    )
+
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "loss_train": loss,
+                    "loss_test": loss_test,
+                    "accuracy_train": acc,
+                    "accuracy_test": acc_test,
+                    "auc_train": auc,
+                    "auc_test": auc_test,
+                    "f1_train": f1,
+                    "f1_test": f1_test,
+                },
+                path,
+            )
+
+    return best_acc.numpy(), acc_test.numpy(), best_auc, auc_test, best_f1, f1_test
 
 
 class Hook:
