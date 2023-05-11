@@ -30,17 +30,17 @@ def data_loader(X: np.ndarray, y: np.ndarray) -> DataLoader:
 class SimpleNN(nn.Module):
     def __init__(self, criteria_nr: int = 5):
         super(SimpleNN, self).__init__()
-        self.fc1 = nn.Linear(criteria_nr, 8)
-        self.fc2 = nn.Linear(8, 16)
-        # self.fc3 = nn.Linear(16, 16)
-        self.fc4 = nn.Linear(16, 1)
+        self.fc1 = nn.Linear(criteria_nr, 40)
+        self.fc2 = nn.Linear(40, 40)
+        self.fc3 = nn.Linear(40, 20)
+        self.fc4 = nn.Linear(20, 1)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         x = self.fc1(x)
         x = F.relu(self.fc2(x))
-        # x = F.relu(self.fc3(x))
-        x = F.relu(self.fc4(x))
+        x = F.relu(self.fc3(x))
+        x = self.fc4(x)
         x = self.sigmoid(x)
         return x
 
