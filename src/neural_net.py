@@ -27,13 +27,14 @@ class SimpleNN(nn.Module):
         x = self.sigmoid(x)
         return x
 
+
 def Train_NN(
     model: SimpleNN,
     train_dataloader: DataLoader,
     test_dataloader: DataLoader,
     path: str,
-    lr: float=0.01,
-    epoch_nr: int=200,
+    lr: float = 0.01,
+    epoch_nr: int = 200,
 ):
     optimizer = optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.99))
     loss_function = nn.BCELoss()
@@ -53,7 +54,9 @@ def Train_NN(
             acc = metric.compute().item()
             auc = roc_auc_score(labels, outputs.detach().numpy()[:, 0])
             _, _, f1, _ = precision_recall_fscore_support(
-                labels, np.squeeze(sig(outputs).detach().numpy().round()), average="binary"
+                labels,
+                np.squeeze(sig(outputs).detach().numpy().round()),
+                average="binary",
             )
 
         if acc > best_acc:
@@ -69,7 +72,9 @@ def Train_NN(
                     acc_test = metric.compute().item()
                     auc_test = roc_auc_score(labels, outputs.detach().numpy()[:, 0])
                     _, _, f1_test, _ = precision_recall_fscore_support(
-                        labels, np.squeeze(sig(outputs).detach().numpy().round()), average="binary"
+                        labels,
+                        np.squeeze(sig(outputs).detach().numpy().round()),
+                        average="binary",
                     )
 
             torch.save(

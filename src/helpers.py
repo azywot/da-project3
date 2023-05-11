@@ -107,8 +107,6 @@ def Train(
     return best_acc, acc_test, best_auc, auc_test, best_f1, f1_test
 
 
-
-
 class Hook:
     def __init__(self, m, f):
         self.hook = m.register_forward_hook(partial(f, self))
