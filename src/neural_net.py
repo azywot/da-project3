@@ -6,25 +6,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from tqdm.notebook import tqdm as tqdm
-
-
-class NumpyDataset(Dataset):
-    def __init__(self, data, targets):
-        self.data = torch.Tensor(data)
-        self.targets = torch.Tensor(targets.astype(int))
-
-    def __getitem__(self, index):
-        x = self.data[index]
-        y = self.targets[index]
-        return x, y
-
-    def __len__(self):
-        return len(self.data)
-
-
-def data_loader(X: np.ndarray, y: np.ndarray) -> DataLoader:
-    dataset = NumpyDataset(X, y)
-    return DataLoader(dataset, batch_size=16)
+from torcheval.metrics import BinaryAccuracy
+from sklearn.metrics import roc_auc_score, precision_recall_fscore_support
 
 
 class SimpleNN(nn.Module):
@@ -44,25 +27,66 @@ class SimpleNN(nn.Module):
         x = self.sigmoid(x)
         return x
 
-
-def train(
-    model: SimpleNN, train_dataloader: DataLoader, lr: float = 0.01, epoch_nr: int = 10
-) -> None:
+def Train_NN(
+    model: SimpleNN,
+    train_dataloader: DataLoader,
+    test_dataloader: DataLoader,
+    path: str,
+    lr: float=0.01,
+    epoch_nr: int=200,
+):
     optimizer = optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.99))
-    criterion = nn.BCELoss()
-    for epoch in range(epoch_nr):
-        with tqdm(train_dataloader, unit="batch") as tepoch:
-            tepoch.set_description(f"Epoch {epoch}")
-            for data in tepoch:
-                inputs, labels = data
-                optimizer.zero_grad()
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
-                accuracy = (outputs.round() == labels).float().mean()
+    loss_function = nn.BCELoss()
+    metric = BinaryAccuracy()
+    best_acc = 0.0
+    best_auc = 0.0
+    sig = nn.Sigmoid()
+    for epoch in tqdm(range(epoch_nr)):
+        for _, data in enumerate(train_dataloader, 0):
+            inputs, labels = data
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = loss_function(sig(np.squeeze(outputs)), labels.float())
+            loss.backward()
+            optimizer.step()
+            metric.update(torch.flatten(outputs), labels)
+            acc = metric.compute().item()
+            auc = roc_auc_score(labels, outputs.detach().numpy()[:, 0])
+            _, _, f1, _ = precision_recall_fscore_support(
+                labels, np.squeeze(sig(outputs).detach().numpy().round()), average="binary"
+            )
 
-                loss.backward()
-                optimizer.step()
+        if acc > best_acc:
+            best_acc = acc
+            best_auc = auc
+            best_f1 = f1
+            with torch.no_grad():
+                for i, data in enumerate(test_dataloader, 0):
+                    inputs, labels = data
+                    outputs = model(inputs)
+                    loss_test = loss_function(sig(np.squeeze(outputs)), labels.float())
+                    metric.update(torch.flatten(outputs), labels)
+                    acc_test = metric.compute().item()
+                    auc_test = roc_auc_score(labels, outputs.detach().numpy()[:, 0])
+                    _, _, f1_test, _ = precision_recall_fscore_support(
+                        labels, np.squeeze(sig(outputs).detach().numpy().round()), average="binary"
+                    )
 
-                tepoch.set_postfix(loss=loss.item(), accuracy=100 * accuracy)
-                tepoch.update()
-                sleep(0.01)
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "loss_train": loss,
+                    "loss_test": loss_test,
+                    "accuracy_train": acc,
+                    "accuracy_test": acc_test,
+                    "auc_train": auc,
+                    "auc_test": auc_test,
+                    "f1_train": f1,
+                    "f1_test": f1_test,
+                },
+                path,
+            )
+
+    return best_acc, acc_test, best_auc, auc_test, best_f1, f1_test

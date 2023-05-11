@@ -6,7 +6,7 @@ from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 import shap
 import matplotlib.pyplot as plt
 from src.nb_UTA import Uta
-from src.helpers import append_output, Hook, Accuracy, AUC, F1_score
+from src.helpers import append_output, Hook
 
 
 def add_measures(measures: dict, results: tuple, model_name: str, mode: str) -> dict:
@@ -34,15 +34,6 @@ def shap_tree_explainer(
     shap_values = explainer.shap_values(x)
     # np.abs(shap_values.sum(1) + explainer.expected_value - pred).max()
     shap.summary_plot(shap_values, x, color="coolwarm")
-    return explainer, shap_values
-
-
-# NOTE: not used
-def shap_deep_explainer(model: nn.Module, x: np.ndarray) -> tuple:
-    x_tensor = torch.from_numpy(x)
-    explainer = shap.DeepExplainer(model, x_tensor)
-    shap_values = explainer.shap_values(x_tensor)
-    shap.summary_plot(shap_values, x_tensor, color="coolwarm")
     return explainer, shap_values
 
 
@@ -108,7 +99,7 @@ def plot_measures(data):
             [xi + (width / 2) for xi in x],
             test_data,
             width=width,
-            color="g",
+            color="deeppink",
             alpha=0.5,
             label="test",
         )
