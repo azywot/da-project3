@@ -1,11 +1,12 @@
 # SOURCE: Professor Krzysztof Martyn (PUT)
 import torch
+import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
+from torcheval.metrics import BinaryAccuracy
 from tqdm import tqdm
 from sklearn.metrics import roc_auc_score, precision_recall_fscore_support
 import numpy as np
-import torch.nn as nn
 
 from functools import partial
 from src.neural_net import SimpleNN
@@ -119,6 +120,7 @@ def Train_NN(
 ):
     optimizer = optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.99))
     loss_function = nn.BCELoss()
+    metric = BinaryAccuracy()
     best_acc = 0.0
     best_auc = 0.0
     sig = nn.Sigmoid()
@@ -132,8 +134,8 @@ def Train_NN(
             loss = loss_function(sig(np.squeeze(outputs)), labels.float())
             loss.backward()
             optimizer.step()
-            acc = (outputs.round() == labels).float().mean()
-            # print(acc)
+            metric.update(torch.flatten(outputs), labels)
+            acc = metric.compute()
             auc = roc_auc_score(labels, outputs.detach().numpy()[:, 0])
             # print(np.squeeze(sig(outputs).detach().numpy().round()))
             _, _, f1, _ = precision_recall_fscore_support(
