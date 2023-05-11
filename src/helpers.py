@@ -1,11 +1,9 @@
 # SOURCE: Professor Krzysztof Martyn (PUT)
 import torch
-import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 from sklearn.metrics import roc_auc_score, precision_recall_fscore_support
-import numpy as np
 
 from functools import partial
 from src.neural_net import SimpleNN

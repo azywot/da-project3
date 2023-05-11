@@ -1,7 +1,6 @@
 import numpy as np
 import xgboost as xgb
 import torch
-import torch.nn as nn
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 import shap
 import matplotlib.pyplot as plt
